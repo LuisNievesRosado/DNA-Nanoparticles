@@ -1,0 +1,541 @@
+### System setup ###
+
+## LAMMPS Settings ##
+units 			lj     
+atom_style		full 
+boundary m m m
+timestep 0.005
+neigh_modify delay 1
+comm_modify cutoff 2.5
+
+### Variable definitions ###
+
+
+
+variable Erep equal 1.0 
+
+variable KB1 equal 165 # 165 is value on Ting et al  
+variable KB2 equal 165 # 165 is value on Ting et al  
+variable KB3 equal 165 # 165 is value on Ting et al  
+variable KB4 equal 165 # 165 is value on Ting et al 
+
+variable KA1 equal 5  # 5 is value on Ting et al
+variable KA2 equal 5  # 5 is value on Ting et al
+variable KA3 equal 60  # 60 is value on Knorowski et al
+
+variable Kcore equal 10
+
+variable T1 equal 1.0
+variable T2 equal 1.0
+
+## Read data files
+read_data PNP.data
+
+## Interaction information ##
+
+pair_style lj/cut 0.673
+
+# 1-1 Family
+pair_coeff 1 1 ${Erep} 1.0 1.122
+pair_coeff 1 2 ${Erep} 1.0 1.122
+pair_coeff 1 8 ${Erep} 1.0 1.122
+pair_coeff 2 2 ${Erep} 1.0 1.122
+pair_coeff 2 8 ${Erep} 1.0 1.122
+pair_coeff 8 8 ${Erep} 1.0 1.122
+
+# 1-3 Family
+pair_coeff 1 3 ${Erep} 0.8 0.898
+pair_coeff 1 4 ${Erep} 0.8 0.898
+pair_coeff 1 5 ${Erep} 0.8 0.898
+pair_coeff 1 6 ${Erep} 0.8 0.898
+pair_coeff 1 7 ${Erep} 0.8 0.898
+
+pair_coeff 2 3 ${Erep} 0.8 0.898
+pair_coeff 2 4 ${Erep} 0.8 0.898
+pair_coeff 2 5 ${Erep} 0.8 0.898
+pair_coeff 2 6 ${Erep} 0.8 0.898
+pair_coeff 2 7 ${Erep} 0.8 0.898
+
+pair_coeff 3 8 ${Erep} 0.8 0.898
+pair_coeff 4 8 ${Erep} 0.8 0.898
+pair_coeff 5 8 ${Erep} 0.8 0.898
+pair_coeff 6 8 ${Erep} 0.8 0.898
+pair_coeff 7 8 ${Erep} 0.8 0.898
+
+# 3-4
+pair_coeff 3 4 ${Erep} 0.6 0.673
+
+# 5-6
+pair_coeff 5 6 ${Erep} 0.6 0.673
+
+# 3-3 Family
+pair_coeff 3 3 ${Erep} 0.6 0.673
+pair_coeff 4 4 ${Erep} 0.6 0.673
+pair_coeff 5 5 ${Erep} 0.6 0.673
+pair_coeff 6 6 ${Erep} 0.6 0.673
+pair_coeff 7 7 ${Erep} 0.6 0.673
+
+pair_coeff 3 5 ${Erep} 0.6 0.673
+pair_coeff 3 6 ${Erep} 0.6 0.673
+pair_coeff 3 7 ${Erep} 0.6 0.673
+
+pair_coeff 4 5 ${Erep} 0.6 0.673
+pair_coeff 4 6 ${Erep} 0.6 0.673
+pair_coeff 4 7 ${Erep} 0.6 0.673
+
+pair_coeff 5 7 ${Erep} 0.6 0.673
+pair_coeff 6 7 ${Erep} 0.6 0.673
+
+
+pair_modify shift yes
+
+bond_style harmonic
+bond_coeff 1 ${KB1} 0.84
+bond_coeff 2 ${KB2} 0.84
+bond_coeff 3 ${KB3} 0.84
+bond_coeff 4 ${KB4} 1.19
+
+angle_style harmonic
+angle_coeff 1 ${KA1} 180
+angle_coeff 2 ${KA2} 180
+angle_coeff 3 ${KA3} 180
+
+
+## Set-up groups
+
+group Core1 molecule 1
+group Core2 molecule 2
+group Cores molecule 1 2
+group Poly molecule 3 4 5 6
+
+## Set-up simulation thermodynamic output ##
+
+# Compute to measure temperature
+compute T all temp
+
+thermo 1000
+thermo_style custom step pe ke etotal c_T press epair evdwl ebond eangle 
+dump 2 all atom 5000 PNP2.lammpstrj
+
+
+velocity Poly create ${T1} 191 mom yes rot yes dist gaussian
+
+### do a short minimization run
+fix 0 Poly nve/limit 0.001
+run 10000
+unfix 0
+
+
+### equilibriate the polymers
+fix 1 Poly nvt temp ${T1} ${T2} $(100.0*dt)
+run 100000
+unfix 1
+
+fix 2 Poly nvt temp ${T2} ${T2} $(100.0*dt)
+
+### Start fix move runs.
+write_data DX50.0.data nocoeff
+fix 3 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 3
+
+write_data DX49.5.data nocoeff
+fix 4 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 4
+
+write_data DX49.0.data nocoeff
+fix 5 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 5
+
+write_data DX48.5.data nocoeff
+fix 6 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 6
+
+write_data DX48.0.data nocoeff
+fix 7 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 7
+
+write_data DX47.5.data nocoeff
+fix 8 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 8
+
+write_data DX47.0.data nocoeff
+fix 9 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 9
+
+write_data DX46.5.data nocoeff
+fix 10 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 10
+
+write_data DX46.0.data nocoeff
+fix 11 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 11
+
+write_data DX45.5.data nocoeff
+fix 12 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 12
+
+write_data DX45.0.data nocoeff
+fix 13 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 13
+
+write_data DX44.5.data nocoeff
+fix 14 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 14
+
+write_data DX44.0.data nocoeff
+fix 15 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 15
+
+write_data DX43.5.data nocoeff
+fix 16 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 16
+
+write_data DX43.0.data nocoeff
+fix 17 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 17
+
+write_data DX42.5.data nocoeff
+fix 18 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 18
+
+write_data DX42.0.data nocoeff
+fix 19 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 19
+
+write_data DX41.5.data nocoeff
+fix 20 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 20
+
+write_data DX41.0.data nocoeff
+fix 21 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 21
+
+write_data DX40.5.data nocoeff
+fix 22 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 22
+
+write_data DX40.0.data nocoeff
+fix 23 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 23
+
+write_data DX39.5.data nocoeff
+fix 24 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 24
+
+write_data DX39.0.data nocoeff
+fix 25 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 25
+
+write_data DX38.5.data nocoeff
+fix 26 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 26
+
+write_data DX38.0.data nocoeff
+fix 27 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 27
+
+write_data DX37.5.data nocoeff
+fix 28 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 28
+
+write_data DX37.0.data nocoeff
+fix 29 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 29
+
+write_data DX36.5.data nocoeff
+fix 30 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 30
+
+write_data DX36.0.data nocoeff
+fix 31 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 31
+
+write_data DX35.5.data nocoeff
+fix 32 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 32
+
+write_data DX35.0.data nocoeff
+fix 33 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 33
+
+write_data DX34.5.data nocoeff
+fix 34 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 34
+
+write_data DX34.0.data nocoeff
+fix 35 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 35
+
+write_data DX33.5.data nocoeff
+fix 36 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 36
+
+write_data DX33.0.data nocoeff
+fix 37 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 37
+
+write_data DX32.5.data nocoeff
+fix 38 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 38
+
+write_data DX32.0.data nocoeff
+fix 39 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 39
+
+write_data DX31.5.data nocoeff
+fix 40 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 40
+
+write_data DX31.0.data nocoeff
+fix 41 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 41
+
+write_data DX30.5.data nocoeff
+fix 42 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 42
+
+write_data DX30.0.data nocoeff
+fix 43 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 43
+
+write_data DX29.5.data nocoeff
+fix 44 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 44
+
+write_data DX29.0.data nocoeff
+fix 45 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 45
+
+write_data DX28.5.data nocoeff
+fix 46 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 46
+
+write_data DX28.0.data nocoeff
+fix 47 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 47
+
+write_data DX27.5.data nocoeff
+fix 48 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 48
+
+write_data DX27.0.data nocoeff
+fix 49 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 49
+
+write_data DX26.5.data nocoeff
+fix 50 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 50
+
+write_data DX26.0.data nocoeff
+fix 51 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 51
+
+write_data DX25.5.data nocoeff
+fix 52 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 52
+
+write_data DX25.0.data nocoeff
+fix 53 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 53
+
+write_data DX24.5.data nocoeff
+fix 54 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 54
+
+write_data DX24.0.data nocoeff
+fix 55 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 55
+
+write_data DX23.5.data nocoeff
+fix 56 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 56
+
+write_data DX23.0.data nocoeff
+fix 57 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 57
+
+write_data DX22.5.data nocoeff
+fix 58 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 58
+
+write_data DX22.0.data nocoeff
+fix 59 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 59
+
+write_data DX21.5.data nocoeff
+fix 60 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 60
+
+write_data DX21.0.data nocoeff
+fix 61 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 61
+
+write_data DX20.5.data nocoeff
+fix 62 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 62
+
+write_data DX20.0.data nocoeff
+fix 63 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 63
+
+write_data DX19.5.data nocoeff
+fix 64 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 64
+
+write_data DX19.0.data nocoeff
+fix 65 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 65
+
+write_data DX18.5.data nocoeff
+fix 66 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 66
+
+write_data DX18.0.data nocoeff
+fix 67 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 67
+
+write_data DX17.5.data nocoeff
+fix 68 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 68
+
+write_data DX17.0.data nocoeff
+fix 69 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 69
+
+write_data DX16.5.data nocoeff
+fix 70 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 70
+
+write_data DX16.0.data nocoeff
+fix 71 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 71
+
+write_data DX15.5.data nocoeff
+fix 72 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 72
+
+write_data DX15.0.data nocoeff
+fix 73 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 73
+
+write_data DX14.5.data nocoeff
+fix 74 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 74
+
+write_data DX14.0.data nocoeff
+fix 75 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 75
+
+write_data DX13.5.data nocoeff
+fix 76 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 76
+
+write_data DX13.0.data nocoeff
+fix 77 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 77
+
+write_data DX12.5.data nocoeff
+fix 78 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 78
+
+write_data DX12.0.data nocoeff
+fix 79 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 79
+
+write_data DX11.5.data nocoeff
+fix 80 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 80
+
+write_data DX11.0.data nocoeff
+fix 81 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 81
+
+write_data DX10.5.data nocoeff
+fix 82 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 82
+
+write_data DX10.0.data nocoeff
+fix 83 Core2 move linear -0.008 0.0 0.0
+run 12500
+unfix 83
+

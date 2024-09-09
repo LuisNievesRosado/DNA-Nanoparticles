@@ -1,0 +1,208 @@
+### System setup ###
+
+## LAMMPS Settings ##
+units 			lj     
+atom_style		full 
+boundary p p p 
+timestep 0.005
+neigh_modify delay 1
+
+### Variable definitions ###
+
+variable T equal 1.5
+
+variable P equal 1.0
+
+variable E34 equal 10.0
+variable E56 equal 10.0
+variable Erep equal 1.0 
+
+variable KB1 equal 165 # 165 is value on Ting et al  
+variable KB2 equal 165 # 165 is value on Ting et al  
+variable KB3 equal 165 # 165 is value on Ting et al  
+variable KB4 equal 165 # 165 is value on Ting et al  
+
+variable KA1 equal 5  # 5 is value on Ting et al
+variable KA2 equal 5  # 5 is value on Ting et al
+variable KA3 equal 60  # 60 is value on Knorowski et al
+
+
+## Read data files ##
+read_data LargeIP.data
+
+
+## Interaction information ##
+
+pair_style lj/cut 0.673
+
+# 1-1 Family
+pair_coeff 1 1 ${Erep} 1.0 1.122
+pair_coeff 1 2 ${Erep} 1.0 1.122
+pair_coeff 1 8 ${Erep} 1.0 1.122
+pair_coeff 2 2 ${Erep} 1.0 1.122
+pair_coeff 2 8 ${Erep} 1.0 1.122
+pair_coeff 8 8 ${Erep} 1.0 1.122
+
+# Center Family - will be ignored later
+pair_coeff 9 * ${Erep} 1.0 1.122
+pair_coeff 10 * ${Erep} 1.0 1.122
+
+
+# 1-3 Family
+pair_coeff 1 3 ${Erep} 0.8 0.898
+pair_coeff 1 4 ${Erep} 0.8 0.898
+pair_coeff 1 5 ${Erep} 0.8 0.898
+pair_coeff 1 6 ${Erep} 0.8 0.898
+pair_coeff 1 7 ${Erep} 0.8 0.898
+
+pair_coeff 2 3 ${Erep} 0.8 0.898
+pair_coeff 2 4 ${Erep} 0.8 0.898
+pair_coeff 2 5 ${Erep} 0.8 0.898
+pair_coeff 2 6 ${Erep} 0.8 0.898
+pair_coeff 2 7 ${Erep} 0.8 0.898
+
+pair_coeff 3 8 ${Erep} 0.8 0.898
+pair_coeff 4 8 ${Erep} 0.8 0.898
+pair_coeff 5 8 ${Erep} 0.8 0.898
+pair_coeff 6 8 ${Erep} 0.8 0.898
+pair_coeff 7 8 ${Erep} 0.8 0.898
+
+
+# 3-4
+pair_coeff 3 4 ${E34} 0.6 3.0
+
+# 5-6
+pair_coeff 5 6 ${E56} 0.6 3.0
+
+# 3-3 Family
+pair_coeff 3 3 ${Erep} 0.6 0.673
+pair_coeff 4 4 ${Erep} 0.6 0.673
+pair_coeff 5 5 ${Erep} 0.6 0.673
+pair_coeff 6 6 ${Erep} 0.6 0.673
+pair_coeff 7 7 ${Erep} 0.6 0.673
+
+pair_coeff 3 5 ${Erep} 0.6 0.673
+pair_coeff 3 6 ${Erep} 0.6 0.673
+pair_coeff 3 7 ${Erep} 0.6 0.673
+
+pair_coeff 4 5 ${Erep} 0.6 0.673
+pair_coeff 4 6 ${Erep} 0.6 0.673
+pair_coeff 4 7 ${Erep} 0.6 0.673
+
+pair_coeff 5 7 ${Erep} 0.6 0.673
+pair_coeff 6 7 ${Erep} 0.6 0.673
+
+pair_modify shift yes
+
+bond_style harmonic
+bond_coeff 1 ${KB1} 0.84
+bond_coeff 2 ${KB2} 0.84
+bond_coeff 3 ${KB3} 0.84
+bond_coeff 4 ${KB4} 1.19
+
+angle_style harmonic
+angle_coeff 1 ${KA1} 180
+angle_coeff 2 ${KA2} 180
+angle_coeff 3 ${KA3} 180
+
+
+## Set-up groups
+
+# 164184 numbers
+group PolyC molecule 1
+group PolyI molecule 2
+group Poly molecule 1 2
+ 
+group CoreC molecule <> 3 99 # <> is inclusive
+group CoreI molecule > 99
+group Cores molecule > 2
+
+# 164279 numbers
+#group PolyC molecule 1
+#group PolyI molecule 2
+#group Poly molecule 1 2
+#
+#group CoreC molecule <> 3 107 # <> is inclusive
+#group CoreI molecule > 107
+#group Cores molecule > 2
+
+
+
+
+
+
+## Remove intra core interactions
+neigh_modify exclude molecule/intra Cores
+
+## Remove inner particle interactions
+
+neigh_modify exclude type 1 9 
+neigh_modify exclude type 2 9
+neigh_modify exclude type 3 9
+neigh_modify exclude type 4 9
+neigh_modify exclude type 5 9
+neigh_modify exclude type 6 9
+neigh_modify exclude type 7 9
+neigh_modify exclude type 8 9
+neigh_modify exclude type 9 9
+
+neigh_modify exclude type 1 10
+neigh_modify exclude type 2 10
+neigh_modify exclude type 3 10
+neigh_modify exclude type 4 10
+neigh_modify exclude type 5 10
+neigh_modify exclude type 6 10
+neigh_modify exclude type 7 10
+neigh_modify exclude type 8 10
+neigh_modify exclude type 9 10
+neigh_modify exclude type 10 10 
+
+## Set-up simulation thermodynamic output ##
+
+# Compute to measure temperature
+compute T all temp
+
+thermo 1000
+thermo_style custom step pe ke etotal c_T press epair evdwl ebond eangle 
+dump 1 all atom 50000 PNP.lammpstrj
+
+
+velocity Poly create ${T} 191 mom yes rot yes dist gaussian
+
+restart 500000 res1.restart res2.restart
+
+### equilibrate the polymers
+fix nvl Poly nve/limit 0.01
+run 500000
+unfix nvl
+
+
+fix 1 Poly nvt temp ${T} ${T} $(100.0*dt)
+run 100000
+unfix 1
+
+
+
+### equilibrate the isotropic section
+fix 2 all momentum 10000 linear 1 1 1 
+#fix 3 PolyI nvt temp ${T} ${T} $(100.0*dt) 
+#fix 4 CoreI rigid/npt molecule temp ${T} ${T} $(100.0*dt) z ${P} ${P} $(1000.0*dt) dilate all
+#run 500000
+        
+#unfix 3
+#unfix 4
+
+
+### Run IP simulations
+
+
+fix 5 Cores rigid/nvt molecule temp ${T} ${T} $(100.0*dt)
+fix 6 all plumed plumedfile plumedinp.dat outfile pl.log
+fix 7 Poly npt temp ${T} ${T} $(100.0*dt) z ${P} ${P} $(1000.0*dt) dilate all
+run 5000000
+
+
+
+
+
+

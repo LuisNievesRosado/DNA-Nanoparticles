@@ -1,0 +1,85 @@
+## LAMMPS Settings ##
+log SS.log
+units 			lj     
+atom_style		atomic     
+boundary p p p
+neigh_modify delay 0
+timestep 0.01
+
+
+### System Variable definitions ###
+variable rho equal 0.0005
+#variable N1 equal 5000
+#variable N2 equal 5000
+
+
+variable NT equal ${N1}+${N2}
+variable L equal (${NT}/${rho})^(0.333)
+variable L2 equal ${L}/2
+
+### Simulation Variable Definitions ###
+#variable T equal 2.0
+
+#variable P1 equal 1.0
+
+
+### Make Simulation Box and Atoms ###
+region mybox block 0.0 ${L} 0.0 ${L} 0.0 ${L}
+create_box 2 mybox
+
+create_atoms 1 random ${N1} 1253 NULL
+create_atoms 2 random ${N2} 1281 NULL
+mass * 1.0
+
+group 1 type 1
+group 2 type 2
+
+
+write_data INI.data
+
+### Interaction information ###
+pair_style table linear 1000
+
+pair_coeff 1 1 AAP.pot AA 3.5
+pair_coeff 2 2 BBP.pot BB 3.5
+pair_coeff 1 2 ABP.pot AB 3.5
+
+
+
+### Set dump and thermodynamic output ###
+dump 1 all atom 20000 SS1.lammpstrj
+
+compute T all temp
+
+compute g all rdf 100 * *
+fix g all ave/time 100 5 1000 c_g[*] file SS1.g mode vector
+
+thermo 1000
+thermo_style custom step vol pe ke etotal c_T press 
+
+
+
+### Set Up De-Overlap Simulation ###
+
+### Run To Remove Overlaps ###
+#fix 1 all nve/limit 0.005
+#run 10000
+#unfix 1
+
+### Prepare for Langevin Dynamics ###
+
+velocity all create ${T} 191 mom yes rot yes dist gaussian
+fix 2 all langevin ${T} ${T} $(100.0*dt) 562315 zero yes
+fix 3 all press/berendsen iso ${P} ${P} $(1000.0*dt)
+fix 4 all nve
+run 20000000
+
+### Write data for wall simulations ###
+write_data SSout.data
+
+
+
+
+
+
+
