@@ -1,0 +1,81 @@
+## LAMMPS Settings ##
+log SS.log
+units 			lj     
+atom_style		atomic     
+boundary p p p
+neigh_modify delay 0
+timestep 0.01
+
+
+### System Variable definitions ###
+variable rho equal 0.025
+variable N1 equal 5000
+
+
+
+variable NT equal ${N1}
+variable L equal (${NT}/${rho})^(0.333)
+variable L2 equal ${L}/2
+
+### Simulation Variable Definitions ###
+variable T1 equal 2.0
+variable T2 equal 0.1
+
+variable P1 equal 1.0
+
+
+### Make Simulation Box and Atoms ###
+region mybox block 0.0 ${L} 0.0 ${L} 0.0 ${L}
+create_box 1 mybox
+
+create_atoms 1 random ${N1} 1253 NULL
+mass * 1.0
+
+
+
+write_data INI.data
+
+### Interaction information ###
+pair_style table linear 1000
+
+pair_coeff 1 1 DATAP.pot DATAP 4.5
+
+
+
+
+### Set dump and thermodynamic output ###
+dump 1 all atom 5000 DW.lammpstrj
+
+compute T all temp
+
+compute g all rdf 100 * *
+fix g all ave/time 100 5 1000 c_g[*] file DW.g mode vector
+
+thermo 1000
+thermo_style custom step vol pe ke etotal c_T press 
+
+
+
+### Set Up De-Overlap Simulation ###
+
+### Run To Remove Overlaps ###
+#fix 1 all nve/limit 0.005
+#run 10000
+#unfix 1
+
+### Prepare for Langevin Dynamics ###
+
+velocity all create ${T1} 191 mom yes rot yes dist gaussian
+#fix 2 all npt temp ${T1} ${T2} $(100.0*dt) iso ${P1} ${P1} $(1000.0*dt)
+fix 2 all nvt temp ${T1} ${T2} $(100.0*dt) 
+run 10000000
+
+### Write data for wall simulations ###
+write_data DWout.data
+
+
+
+
+
+
+

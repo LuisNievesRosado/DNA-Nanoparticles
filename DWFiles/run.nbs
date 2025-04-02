@@ -1,0 +1,59 @@
+#!/bin/bash 
+#SBATCH -J T3
+#SBATCH -p "fe13" 
+#SBATCH -N 1 
+#SBATCH -n 4 
+##SBATCH --ntasks-per-core=12 
+#SBATCH --time=96:00:00 
+#SBATCH -o slurm-%j.out 
+#SBATCH -e slurm-%j.err 
+#SBATCH --mail-type=END 
+#SBATCH --mail-user=lan58@cornell.edu 
+##SBATCH --use-hwthread-cpus 
+
+### GET COMPUTE NODE NAME 
+node_name=$(squeue -j $SLURM_JOB_ID| awk 'NR==2{print $8}') 
+#node_name=$(squeue -h -o "%N" -j1000) 
+echo $node_name 
+
+##STORING /tmp/ directory PATH 
+MYTMP=/tmp/$USER/$SLURM_JOB_ID 
+
+##MAKING DIRECTORY IN COMPUTE /tmp/userid 
+/usr/bin/mkdir -p $MYTMP || exit $? 
+echo "Copy data to /tmp on the compute node." 
+
+## copying files from working dir to compute node dir ## NOTE: DIRECTORY HAS BEEN EXCLUDED 
+cp -rp $SLURM_SUBMIT_DIR/* $MYTMP || echo $? 
+
+##cd to directory to run your job 
+### SETTING UP nohup HERE 
+
+#module load python 
+echo " SETTING up Python code here" 
+
+#echo " SETTING up Python code here" 
+
+python ~/COPYTEST/run_copy.py $node_name $MYTMP $SLURM_SUBMIT_DIR 
+
+#~/COPYTEST 
+##nohup python -u ~/COPYPYTHON/run_copy.py $node_name $MYTMP $SLURM_SUBMIT_DIR > /dev/null & 
+
+echo "copy python code setup is complete" 
+
+##cd to directory to run your job 
+cd $MYTMP 
+
+echo "Running EXECUTABLE HERE" 
+
+mpirun -np $SLURM_NTASKS /home/fs01/lan58/recovery/software/lammps-3Mar20/build0/lmp_mpi -in PNP.in -log log.lammps > output -screen none 
+
+echo "Ended at `date` on `hostname`." 
+echo "Copy data back to $HOME." 
+cp -rp $MYTMP/* $SLURM_SUBMIT_DIR || exit $? 
+
+##DELETE FOLDER in compute node 
+rm -rf $MYTMP 
+
+exit 0 
+
